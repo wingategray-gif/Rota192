@@ -1877,17 +1877,17 @@ try{mgrOk=sessionStorage.getItem("crewMgr")==="1"}catch(e){}
 const LVL={owner:"Owner",admin:"Admin",manager:"Manager",engineer:"Engineer",viewer:"Viewer",pending:"No access"};
 let starting=false,gateEmail="";
 function gateShow(html){const g=$("#gate");$("#app").hidden=true;g.hidden=false;g.innerHTML=`<div class="card gatecard"><div class="brand"><small>Workshop</small><b>Crew rota</b></div>${html}</div>`}
-function gateSignIn(note){gateShow(`<p>Sign in with your email. We'll send you a 6-digit code.</p>
-  <form id="gt-f" class="gtf"><input id="gt-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email" value="${esc(gateEmail)}" required><button class="btn primary" id="gt-send">Send code</button></form>
+function gateSignIn(note){gateShow(`<p>Sign in with your email. We'll email you a sign-in link.</p>
+  <form id="gt-f" class="gtf"><input id="gt-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email" value="${esc(gateEmail)}" required><button class="btn primary" id="gt-send">Email me a link</button></form>
   ${note?`<p class="gt-note">${esc(note)}</p>`:""}`);setTimeout(()=>{const i=$("#gt-email");if(i)i.focus()},50)}
-function gateCode(){gateShow(`<p>We've emailed a 6-digit code to <b>${esc(gateEmail)}</b>. Enter it here, or tap the link in the email on this device.</p>
+function gateCode(){gateShow(`<p>We've emailed a sign-in link to <b>${esc(gateEmail)}</b>. Open the email on this phone or computer and tap the link. It can take a minute to arrive; check your junk folder too.</p><p class="gt-note">If the email has a 6-digit code instead, type it here:</p>
   <form id="gt-c" class="gtf"><input id="gt-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" aria-label="Code" required><button class="btn primary">Sign in</button></form>
-  <p class="gt-note"><button class="linkbtn" id="gt-back">Use a different email</button> · <button class="linkbtn" id="gt-again">Send a new code</button></p>`);setTimeout(()=>{const i=$("#gt-code");if(i)i.focus()},50)}
+  <p class="gt-note"><button class="linkbtn" id="gt-back">Use a different email</button> · <button class="linkbtn" id="gt-again">Send a new link</button></p>`);setTimeout(()=>{const i=$("#gt-code");if(i)i.focus()},50)}
 function gatePending(){gateShow(`<p>You're signed in as <b>${esc(SB.email)}</b>.</p><p>Your account is waiting to be let in. Ask your manager to add this email to your record on the rota, then press Check again.</p>
   <div class="btns" style="justify-content:center"><button class="btn primary" id="gt-check">Check again</button><button class="btn" id="rb-out">Sign out</button></div>`)}
 function gateMsg(m,out){gateShow(`<p>${esc(m)}</p>${out?'<div class="btns" style="justify-content:center"><button class="btn" id="rb-out">Sign out</button></div>':''}`)}
 async function sendCode(){const {error}=await sb.auth.signInWithOtp({email:gateEmail,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-  if(error){gateSignIn(/rate|seconds|limit/i.test(errText(error))?"Too many codes asked for. Wait a minute and try again.":"Couldn't send the code: "+errText(error));return}gateCode()}
+  if(error){gateSignIn(/rate|seconds|limit/i.test(errText(error))?"Too many sign-in emails asked for. Wait a few minutes and try again.":"Couldn't send the email: "+errText(error));return}gateCode()}
 document.addEventListener("submit",async e=>{const f=e.target;if(f.id!=="gt-f"&&f.id!=="gt-c")return;e.preventDefault();
   const btn=f.querySelector("button");if(btn){btn.disabled=true}
   if(f.id==="gt-f"){gateEmail=$("#gt-email").value.trim().toLowerCase();if(!gateEmail){btn.disabled=false;return}await sendCode();return}
@@ -1896,7 +1896,7 @@ document.addEventListener("submit",async e=>{const f=e.target;if(f.id!=="gt-f"&&
   if(data&&data.session)start(data.session.user)});
 document.addEventListener("click",async e=>{const t=e.target;
   if(t.id==="gt-back"){gateSignIn();return}
-  if(t.id==="gt-again"){await sendCode();toast("New code sent");return}
+  if(t.id==="gt-again"){await sendCode();toast("New link sent");return}
   if(t.id==="gt-check"){starting=false;const {data}=await sb.auth.getSession();if(data&&data.session)start(data.session.user);return}
   if(t.id==="rb-out"){try{await sb.auth.signOut()}catch(_){}location.reload()}});
 async function start(user){if(starting)return;starting=true;SB.uid=user.id;SB.email=user.email||"";
