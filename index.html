@@ -581,8 +581,8 @@ li.aw-clash{border-left:4px solid var(--bad);flex-wrap:wrap}.aw-cov{flex:1 1 100
             <p class="cr-note" style="padding:4px 14px 6px;border-top:1px solid var(--line)">Restore from a backup file. This replaces everything in the app now.</p>
             <div class="btns" style="padding:0 14px 6px;align-items:center"><input type="file" id="bk-file" accept=".json,application/json" style="width:auto;flex:1 1 220px"><button class="btn small warn" id="bk-restore">Restore</button></div>
             <p class="cr-note" id="bk-info" style="padding:0 14px 14px"></p></div>
-          <div class="cr-panel cr-group" id="hist-panel"></div>
           <div class="cr-panel" id="cr-tgt"></div>
+          <div class="cr-panel cr-group" id="hist-panel"></div>
         </div>
 
         <p class="cr-foot ad-only">Read from the rota sheet. Travel days are the brown squares at each end of a rotation. "On site" leaves out crew working abroad (Germany, Aruba), who are counted under Abroad. Finished rotations drop off the Rotas tab once the travel-home day has passed; add or change people and rotations on the Rotas tab. Accommodation covers rotations on site (not abroad), from the travel-out night to the travel-home morning.</p>
@@ -1654,9 +1654,13 @@ window.histSnap=()=>{histR=clone(rotaData());histA=clone(A)};window.histBefore=(
 window.logChanges=()=>{if(!histR||!R){window.histSnap();return false}const L=rotaChanges(histR,R,histA,A);let added=false;
   if(L.length){const t=new Date().toISOString(),who=whoNow();R.log=[...(R.log||[]),...L.map(w=>({id:uid(),t,who,what:w}))].slice(-400);added=true}
   window.histSnap();return added};
+let histOpen=false;
 function renderHist(){const b=g('hist-panel');if(!b)return;const l=(rotaData().log||[]).slice().reverse();
   const when=t=>{const d=new Date(t);return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
-  b.innerHTML=`<h3>Change history</h3>${l.length?`<ul class="cr-list histl">${l.slice(0,histN).map(x=>`<li><span class="nm">${esc(x.what)}</span><span class="meta">${esc(x.who)} · ${when(x.t)}</span></li>`).join('')}</ul>${l.length>histN?'<div class="btns" style="padding:8px 14px 14px"><button class="btn small" id="hist-more">Show more</button></div>':''}`:'<p class="cr-off">Nothing yet. Every change from now on is listed here, newest first.</p>'}`}
+  const li=x=>`<li><span class="nm">${esc(x.what)}</span><span class="meta">${esc(x.who)} · ${when(x.t)}</span></li>`;
+  const top=l.slice(0,10),rest=l.slice(10,10+histN);
+  b.innerHTML=`<h3>Change history</h3>${l.length?`<ul class="cr-list histl">${top.map(li).join('')}</ul>${l.length>10?`<details class="cr-more" id="hist-more-d"${histOpen?' open':''} style="border-top:1px solid var(--line)"><summary style="padding:10px 14px">Earlier changes · ${l.length-10}</summary><ul class="cr-list histl">${rest.map(li).join('')}</ul>${l.length>10+histN?'<div class="btns" style="padding:8px 14px 14px"><button class="btn small" id="hist-more">Show more</button></div>':''}</details>`:''}`:'<p class="cr-off">Nothing yet. Every change from now on is listed here, newest first.</p>'}`}
+document.addEventListener('toggle',e=>{if(e.target.id==='hist-more-d')histOpen=e.target.open},true);
 document.addEventListener('click',e=>{if(e.target.id==='hist-more'){histN+=100;renderHist()}});
 /* ---------- improvement ideas: engineers suggest, everyone votes, managers decide ---------- */
 const IDEA_MAX=3,IDEA_H=48,IDEA_ST={open:'Open',planned:'Approved',no:'Declined',done:'Done'};
