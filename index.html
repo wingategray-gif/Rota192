@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Crew rota</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#2F6E9F"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Crew rota"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script src="supabase.js"></script>
 <script>window.CREW_CFG={url:"https://bphytnbdenenkvtcxkuc.supabase.co",key:"sb_publishable_7dtbysffPtq8UsL_DBiiVA_h3FvjysV"}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1883,9 +1885,13 @@ try{mgrOk=sessionStorage.getItem("crewMgr")==="1"}catch(e){}
 const LVL={owner:"Owner",admin:"Admin",manager:"Manager",engineer:"Engineer",viewer:"Viewer",pending:"No access"};
 let starting=false,gateEmail="";
 function gateShow(html){const g=$("#gate");$("#app").hidden=true;g.hidden=false;g.innerHTML=`<div class="card gatecard"><div class="brand"><small>Workshop</small><b>Crew rota</b></div>${html}</div>`}
+/* iPhone in Safari (not opened from the home screen): suggest adding it first, so the sign-in sticks */
+function iosTip(){const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone||matchMedia("(display-mode: standalone)").matches;
+  return ios&&!standalone?`<p class="gt-note" style="border-top:1px solid var(--line);padding-top:10px">On an iPhone? Tap Share, then <b>Add to Home Screen</b>, and sign in from the new icon. It stays signed in that way.</p>`:""}
 function gateSignIn(note){gateShow(`<p>Sign in with your email. We'll email you a sign-in code.</p>
   <form id="gt-f" class="gtf"><input id="gt-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="Email" value="${esc(gateEmail)}" required><button class="btn primary" id="gt-send">Email me a code</button></form>
-  ${note?`<p class="gt-note">${esc(note)}</p>`:""}`);setTimeout(()=>{const i=$("#gt-email");if(i)i.focus()},50)}
+  ${note?`<p class="gt-note">${esc(note)}</p>`:""}${iosTip()}`);setTimeout(()=>{const i=$("#gt-email");if(i)i.focus()},50)}
 function gateCode(){gateShow(`<p>We've emailed a sign-in code to <b>${esc(gateEmail)}</b>. Type it in below. It can take a minute to arrive; check your junk folder too.</p>
   <form id="gt-c" class="gtf"><input id="gt-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" aria-label="Code" required><button class="btn primary">Sign in</button></form>
   <p class="gt-note"><button class="linkbtn" id="gt-back">Use a different email</button> · <button class="linkbtn" id="gt-again">Send a new code</button></p>`);setTimeout(()=>{const i=$("#gt-code");if(i)i.focus()},50)}
@@ -1966,7 +1972,9 @@ The crew rota is now online. You can see your rotations, accommodation and train
 2. Enter ${p?"this email address: "+p.email:"the email address this message was sent to"}
 3. You'll get an email with a 6-digit code. Type it in and you're signed in. (Check your junk folder if it doesn't arrive within a minute.)
 
-On your phone, use "Add to Home Screen" so it opens like an app.
+Put it on your phone's home screen so it opens like an app and stays signed in:
+- iPhone: open the link in Safari, tap Share, then "Add to Home Screen". Open the rota from the new icon and sign in there.
+- Android: open the link in Chrome, tap the ⋮ menu, then "Add to Home screen" (or "Install app").
 
 Any problems, let me know.
 ${me}`}
