@@ -51,6 +51,11 @@ create table if not exists public.people_private (
   person_id text primary key references public.people(id) on delete cascade,
   email     text
 );
+-- the level someone gets when they first sign in (set ahead of time by you)
+alter table public.people_private add column if not exists level text not null default 'engineer';
+do $$ begin
+  alter table public.people_private add constraint people_private_level check (level in ('admin','manager','engineer','viewer'));
+exception when others then null; end $$;
 create table if not exists public.rotations (
   id        text primary key,
   person_id text not null references public.people(id) on delete cascade,
@@ -230,16 +235,16 @@ create policy log_add  on public.log for insert with check (public.is_member());
 -- anyone else waits as "pending" until you or a manager let them in
 create or replace function public.on_new_user() returns trigger
   language plpgsql security definer set search_path = public as $$
-declare pid text;
+declare pid text; lvl text;
 begin
   if not exists (select 1 from public.members) then
     insert into public.members(user_id, email, role) values (new.id, coalesce(new.email,''), 'owner');
     return new;
   end if;
-  select person_id into pid from public.people_private
+  select person_id, level into pid, lvl from public.people_private
     where lower(email) = lower(new.email) and email <> '' limit 1;
   insert into public.members(user_id, email, person_id, role)
-    values (new.id, coalesce(new.email,''), pid, case when pid is null then 'pending' else 'engineer' end)
+    values (new.id, coalesce(new.email,''), pid, case when pid is null then 'pending' else coalesce(lvl,'engineer') end)
     on conflict (user_id) do nothing;
   return new;
 end $$;
@@ -251,7 +256,7 @@ create or replace function public.on_person_email() returns trigger
   language plpgsql security definer set search_path = public as $$
 begin
   if new.email is not null and new.email <> '' then
-    update public.members set person_id = new.person_id, role = 'engineer'
+    update public.members set person_id = new.person_id, role = coalesce(new.level,'engineer')
       where role = 'pending' and lower(email) = lower(new.email);
   end if;
   return new;
@@ -259,6 +264,20 @@ end $$;
 drop trigger if exists crew_on_person_email on public.people_private;
 create trigger crew_on_person_email after insert or update on public.people_private
   for each row execute function public.on_person_email();
+
+-- only you (owner/admin) can set someone up ahead of time as a manager or admin
+create or replace function public.guard_level() returns trigger
+  language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then return new; end if;
+  if new.level in ('admin','manager') and (tg_op = 'INSERT' or new.level is distinct from old.level) and not public.is_admin() then
+    raise exception 'Only the owner or an admin can give someone manager or admin access';
+  end if;
+  return new;
+end $$;
+drop trigger if exists crew_guard_level on public.people_private;
+create trigger crew_guard_level before insert or update on public.people_private
+  for each row execute function public.guard_level();
 
 -- level changes: nobody can make or unmake the owner; managers can only let pending people in as engineers
 create or replace function public.guard_members() returns trigger

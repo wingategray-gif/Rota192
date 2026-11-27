@@ -604,7 +604,7 @@ var unlocked=true;const lockOn=()=>false;
 let VIEW={role:"viewer",pid:""},isAdmin=false,mgrOk=false;
 const FEAT_DEF={away:false,ideas:true};function feat(k){const f=(R&&R.feat)||{};return k in f?!!f[k]:FEAT_DEF[k]}
 function normRota(v){if(!v||!Array.isArray(v.people))return null;
-  return {people:v.people.map(p=>({id:String(p.id||"p"+p.no),no:+p.no||0,name:String(p.name||""),h2s:!!p.h2s,...(p.na?{na:true}:{}),...(p.cas?{cas:true}:{}),...(p.trSelf?{trSelf:String(p.trSelf)}:{}),...(p.email!=null?{email:String(p.email)}:{}),...(Array.isArray(p.away)&&p.away.length?{away:p.away.filter(a=>a&&a.id&&isFinite(+a.s)&&isFinite(+a.e)).map(a=>({id:String(a.id),s:+a.s,e:+a.e,...(a.note?{note:String(a.note)}:{})}))}:{}),
+  return {people:v.people.map(p=>({id:String(p.id||"p"+p.no),no:+p.no||0,name:String(p.name||""),h2s:!!p.h2s,...(p.na?{na:true}:{}),...(p.cas?{cas:true}:{}),...(p.trSelf?{trSelf:String(p.trSelf)}:{}),...(p.email!=null?{email:String(p.email)}:{}),...(p.level?{level:String(p.level)}:{}),...(Array.isArray(p.away)&&p.away.length?{away:p.away.filter(a=>a&&a.id&&isFinite(+a.s)&&isFinite(+a.e)).map(a=>({id:String(a.id),s:+a.s,e:+a.e,...(a.note?{note:String(a.note)}:{})}))}:{}),
     tr:(t=>{const o={};Object.keys(t).forEach(k=>{if(t[k]){o[k]={exp:String(t[k].exp||"")};["issued","prov","ref","tel","done"].forEach(f=>{if(t[k][f])o[k][f]=String(t[k][f])})}});return o})(p.tr&&typeof p.tr==="object"?p.tr:(p.h2s?{h2s:{}}:{})),
     rots:(Array.isArray(p.rots)?p.rots:[]).map(r=>({id:String(r.id||(p.no+"-"+r.s)),s:+r.s||0,e:+r.e||0,d:String(r.d||""),loc:String(r.loc||""),note:String(r.note||"")}))})),
     ...(Array.isArray(v.offers)?{offers:v.offers.filter(o=>o&&o.id&&o.pid)}:{}),...(Array.isArray(v.vols)?{vols:v.vols.filter(o=>o&&o.id&&o.pid)}:{}),
@@ -637,7 +637,7 @@ const PK={people:"id",people_private:"person_id",rotations:"id",training:"person
 function rowsOf(r,a){const T={};ORDER.forEach(t=>T[t]={});const owner={};
   ((r&&r.people)||[]).forEach(p=>{
     T.people[p.id]={id:p.id,no:+p.no||0,name:p.name||"",na:!!p.na,cas:!!p.cas};
-    if(p.email!==undefined)T.people_private[p.id]={person_id:p.id,email:p.email||""};
+    if(p.email!==undefined)T.people_private[p.id]={person_id:p.id,email:p.email||"",level:p.level||"engineer"};
     (p.rots||[]).forEach(x=>{owner[x.id]=p.id;T.rotations[x.id]={id:x.id,person_id:p.id,s:+x.s,e:+x.e,d:x.d||"",loc:x.loc||"",note:x.note||""}});
     if(p.tr&&Object.keys(p.tr).length)T.training[p.id]={person_id:p.id,tr:p.tr,self_at:p.trSelf||null};
     (p.away||[]).forEach(x=>{T.away[x.id]={id:x.id,person_id:p.id,s:+x.s,e:+x.e,note:x.note||""}})});
@@ -689,11 +689,11 @@ async function loadAll(){
     :t==="rotations"?sb.from(t).select("*").order("s"):sb.from(t).select("*")));
   const D={};for(let i=0;i<want.length;i++){if(res[i].error){toast("Couldn't load the rota: "+errText(res[i].error),8000);return false}D[want[i]]=res[i].data||[]}
   const by=(rows,k)=>rows.reduce((m,x)=>((m[x[k]]=m[x[k]]||[]).push(x),m),{});
-  const rot=by(D.rotations,"person_id"),aw=by(D.away,"person_id"),tr=Object.fromEntries(D.training.map(x=>[x.person_id,x.tr||{}])),self=Object.fromEntries(D.training.map(x=>[x.person_id,x.self_at])),em=Object.fromEntries(D.people_private.map(x=>[x.person_id,x.email||""]));
+  const rot=by(D.rotations,"person_id"),aw=by(D.away,"person_id"),tr=Object.fromEntries(D.training.map(x=>[x.person_id,x.tr||{}])),self=Object.fromEntries(D.training.map(x=>[x.person_id,x.self_at])),em=Object.fromEntries(D.people_private.map(x=>[x.person_id,x.email||""])),lv=Object.fromEntries(D.people_private.map(x=>[x.person_id,x.level||"engineer"]));
   const S=Object.fromEntries(D.settings.map(x=>[x.key,x.value]));
   const votes=by(D.idea_votes,"idea_id");
   const rd={people:D.people.sort((a,b)=>a.no-b.no).map(p=>({id:p.id,no:p.no,name:p.name,h2s:p.h2s,...(p.na?{na:true}:{}),...(p.cas?{cas:true}:{}),...(self[p.id]?{trSelf:self[p.id]}:{}),
-      ...(p.id in em?{email:em[p.id]}:{}),tr:tr[p.id]||{},rots:(rot[p.id]||[]).map(x=>({id:x.id,s:x.s,e:x.e,d:x.d,loc:x.loc,note:x.note})),
+      ...(p.id in em?{email:em[p.id],level:lv[p.id]}:{}),tr:tr[p.id]||{},rots:(rot[p.id]||[]).map(x=>({id:x.id,s:x.s,e:x.e,d:x.d,loc:x.loc,note:x.note})),
       ...(aw[p.id]?{away:aw[p.id].map(x=>({id:x.id,s:x.s,e:x.e,...(x.note?{note:x.note}:{})}))}:{})})),
     offers:D.offers.map(o=>({...o.data,id:o.id,pid:o.person_id,status:o.status,...(o.resp?{resp:o.resp}:{}),...(o.resp_at?{respAt:o.resp_at}:{})})),
     vols:D.vols.map(v=>({...v.data,id:v.id,pid:v.person_id})),
@@ -1935,7 +1935,12 @@ function renderAccounts(){const b=$("#acct-panel"),pb=$("#pend-panel");if(!b&&!p
   b.innerHTML=`<div class="cr-accbar"><h3>Sign-in accounts · ${ms.length}</h3></div>
     <p class="cr-note" style="padding:0 14px 8px">Everyone who has signed in. Engineers link up on their own when they sign in with the email on their record (add it with Edit on the Rotas tab). Set someone to No access to lock them out; their rota history is kept.</p>
     <ul class="cr-list acct">${ms.map(m=>`<li style="flex-wrap:wrap"><span class="nm">${esc(m.email)}${m.user_id===SB.uid?" (you)":""}</span>${m.role==="owner"?`<span class="meta" style="flex:none">Owner</span><select data-acp="${m.user_id}" aria-label="Engineer record for ${esc(m.email)}" style="width:auto;flex:1 1 200px">${popts(m.person_id||"")}</select>`
-      :`<select data-acr="${m.user_id}" aria-label="Level for ${esc(m.email)}" style="width:auto">${LV.map(k=>`<option value="${k}"${k===m.role?" selected":""}>${LVL[k]}</option>`).join("")}</select><select data-acp="${m.user_id}" aria-label="Engineer record for ${esc(m.email)}" style="width:auto;flex:1 1 200px">${popts(m.person_id||"")}</select>`}</li>`).join("")}</ul>`}
+      :`<select data-acr="${m.user_id}" aria-label="Level for ${esc(m.email)}" style="width:auto">${LV.map(k=>`<option value="${k}"${k===m.role?" selected":""}>${LVL[k]}</option>`).join("")}</select><select data-acp="${m.user_id}" aria-label="Engineer record for ${esc(m.email)}" style="width:auto;flex:1 1 200px">${popts(m.person_id||"")}</select>`}</li>`).join("")}</ul>
+    ${(()=>{const signed=new Set(ms.map(m=>(m.email||"").toLowerCase())),wait=ppl.filter(p=>p.email&&!signed.has(p.email.toLowerCase())),none=ppl.filter(p=>!p.email&&!p.na&&!linked.has(p.id));
+      return `<h3 style="border-top:1px solid var(--line)">Not signed in yet · ${wait.length}</h3><p class="cr-note" style="padding:0 14px 8px">Set the level each person gets when they first sign in. ${none.length?`${none.length} engineer${none.length>1?"s have":" has"} no email yet (${esc(none.slice(0,6).map(p=>p.name).join(", "))}${none.length>6?"…":""}): add it with Edit on the Rotas tab and they'll appear here.`:""}</p>
+      ${wait.length?`<ul class="cr-list acct">${wait.map(p=>`<li style="flex-wrap:wrap"><span class="nm">${p.no} ${esc(p.name)}<small style="display:block;font-weight:400;color:var(--muted)">${esc(p.email)}</small></span><select data-plv="${p.id}" aria-label="Level for ${esc(p.name)} when they sign in" style="width:auto">${["admin","manager","engineer","viewer"].map(k=>`<option value="${k}"${k===(p.level||"engineer")?" selected":""}>${LVL[k]}</option>`).join("")}</select></li>`).join("")}</ul>`:""}`})()}`}
+document.addEventListener("change",e=>{const t=e.target;if(!t.dataset||!t.dataset.plv||!isAdmin)return;
+  const rd=clone(R),p=rd.people.find(x=>x.id===t.dataset.plv);if(!p)return;p.level=t.value;R=rd;saveR();toast(`${p.name} will be a${t.value==="admin"||t.value==="engineer"?"n":""} ${LVL[t.value]} when they sign in`,4000)});
 document.addEventListener("change",async e=>{const t=e.target;if(!t.dataset||!(t.dataset.acr||t.dataset.acp))return;
   const id=t.dataset.acr||t.dataset.acp,upd=t.dataset.acr?{role:t.value}:{person_id:t.value||null};
   const {error}=await sb.from("members").update(upd).eq("user_id",id);
@@ -1974,7 +1979,7 @@ function renderInvites(){const b=$("#inv-panel");if(!b)return;
     ${noEmail.length?`<details class="cr-more" style="border-top:1px solid var(--line)"><summary style="padding:10px 14px">No email yet · ${noEmail.length}</summary><p class="cr-off">${noEmail.map(p=>esc(p.no+" "+p.name)).join(", ")}</p></details>`:""}`}
 document.addEventListener("click",async e=>{const t=e.target;if(!t.dataset||!t.dataset.invcopy)return;const p=((R&&R.people)||[]).find(x=>x.id===t.dataset.invcopy);if(!p)return;
   try{await navigator.clipboard.writeText(inviteText(p));toast("Copied. Paste it into WhatsApp or a text")}catch(_){toast("Couldn't copy here. Use Send invite instead")}});
-const _renderAll=renderAll;renderAll=function(){_renderAll();renderAccounts();renderInvites()};
+const _renderRota=window.renderRota;window.renderRota=function(){_renderRota();renderAccounts();renderInvites()};
 renderAll();initStore();
 
 </script>
