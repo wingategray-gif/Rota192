@@ -1,0 +1,5 @@
+# backups hold engineers' personal data: never commit them
+*backup*.json
+Crew rota backup*.json
+node_modules/
+__pycache__/
