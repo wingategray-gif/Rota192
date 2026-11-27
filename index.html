@@ -475,6 +475,7 @@ li.aw-clash{border-left:4px solid var(--bad);flex-wrap:wrap}.aw-cov{flex:1 1 100
 .gtf{display:flex;flex-direction:column;gap:10px;width:100%}.gtf input{font-size:17px;text-align:center}#gt-code{letter-spacing:.3em;font:600 22px var(--f-mono)}
 .gt-note{font-size:13.5px;color:var(--muted)}.linkbtn{border:0;background:none;color:var(--steel);font:inherit;cursor:pointer;padding:0;text-decoration:underline}
 .acct li .nm{flex:1 1 220px}
+#inv-panel a.btn{text-decoration:none}
 </style></head><body>
 <div id="gate" hidden></div>
 <div class="app" id="app" hidden>
@@ -536,6 +537,7 @@ li.aw-clash{border-left:4px solid var(--bad);flex-wrap:wrap}.aw-cov{flex:1 1 100
           <div class="cr-pptop"><input class="cr-search" id="cr-q" placeholder="Search a name" aria-label="Search a name"><button class="btn small" data-cre="newPerson">+ Add person</button></div>
           <div id="cr-edit" class="cr-panel cr-card cr-edit" hidden></div>
           <div class="cr-panel cr-group" id="pend-panel" hidden></div>
+          <div class="cr-panel cr-group" id="inv-panel" hidden></div>
           <div class="cr-panel cr-group" id="aw-panel"></div>
           <div class="cr-people" id="cr-people"></div>
         </div>
@@ -1944,7 +1946,35 @@ document.addEventListener("click",async e=>{const t=e.target;if(!t.dataset||!t.d
   const {error}=await sb.from("members").update({role:"engineer",person_id:pid}).eq("user_id",id);if(error){toast("Couldn't let them in: "+errText(error),6000);return}
   if(m){const p=((R&&R.people)||[]).find(x=>x.id===pid);if(p&&!p.email)await sb.from("people_private").upsert({person_id:pid,email:m.email.toLowerCase()})}
   toast("Let in as "+(((R&&R.people)||[]).find(x=>x.id===pid)||{}).name);await loadAll();renderAll()});
-const _renderAll=renderAll;renderAll=function(){_renderAll();renderAccounts()};
+/* ---------- inviting engineers: a ready-made email from your own mail app ---------- */
+const appUrl=()=>location.origin+location.pathname;
+const first=n=>String(n||"").trim().split(/\s+/)[0]||"";
+function inviteText(p){const me=first(SB.name)||"";return `Hi${p?" "+first(p.name):""},
+
+The crew rota is now online. You can see your rotations, accommodation and training there, and keep your training up to date yourself.
+
+1. Open ${appUrl()}
+2. Enter ${p?"this email address: "+p.email:"the email address this message was sent to"}
+3. You'll get an email with a 6-digit code. Type it in and you're signed in. (Check your junk folder if it doesn't arrive within a minute.)
+
+On your phone, use "Add to Home Screen" so it opens like an app.
+
+Any problems, let me know.
+${me}`}
+const INV_SUBJ="Crew rota: your sign-in";
+const mailto=(to,body,bcc)=>`mailto:${bcc?"":encodeURIComponent(to)}?${bcc?"bcc="+encodeURIComponent(to)+"&":""}subject=${encodeURIComponent(INV_SUBJ)}&body=${encodeURIComponent(body)}`;
+function renderInvites(){const b=$("#inv-panel");if(!b)return;
+  const staff=["owner","admin","manager"].includes(SB.role)&&(VIEW.role==="admin"||VIEW.role==="manager");if(!staff){b.hidden=true;b.innerHTML="";return}
+  const linked=new Set((SB.members||[]).filter(m=>m.person_id&&m.role!=="pending").map(m=>m.person_id));
+  const ppl=((R&&R.people)||[]).filter(p=>!p.na),todo=ppl.filter(p=>p.email&&!linked.has(p.id)),noEmail=ppl.filter(p=>!p.email&&!linked.has(p.id)),done=ppl.filter(p=>linked.has(p.id)).length;
+  b.hidden=false;
+  b.innerHTML=`<div class="cr-accbar"><h3>Invite engineers</h3>${todo.length>1?`<a class="btn small primary" href="${mailto(todo.map(p=>p.email).join(","),inviteText(null),true)}">Invite all ${todo.length} not signed in</a>`:""}</div>
+    <p class="cr-note" style="padding:0 14px 8px">${done} signed in · ${todo.length} to invite · ${noEmail.length} without an email yet. "Send invite" opens your own email app with the message ready to check and send. Once they sign in with that email they're linked to their record automatically.</p>
+    ${todo.length?`<ul class="cr-list">${todo.map(p=>`<li style="flex-wrap:wrap"><span class="no">${p.no}</span><span class="nm">${esc(p.name)}</span><span class="meta" style="flex:1 1 180px;text-align:left">${esc(p.email)}</span><a class="btn small" href="${mailto(p.email,inviteText(p))}">Send invite</a><button class="btn small" data-invcopy="${p.id}">Copy message</button></li>`).join("")}</ul>`:`<p class="cr-off">${noEmail.length?"Add emails with Edit on each engineer below, then invite them from here.":"Everyone with an email has signed in."}</p>`}
+    ${noEmail.length?`<details class="cr-more" style="border-top:1px solid var(--line)"><summary style="padding:10px 14px">No email yet · ${noEmail.length}</summary><p class="cr-off">${noEmail.map(p=>esc(p.no+" "+p.name)).join(", ")}</p></details>`:""}`}
+document.addEventListener("click",async e=>{const t=e.target;if(!t.dataset||!t.dataset.invcopy)return;const p=((R&&R.people)||[]).find(x=>x.id===t.dataset.invcopy);if(!p)return;
+  try{await navigator.clipboard.writeText(inviteText(p));toast("Copied. Paste it into WhatsApp or a text")}catch(_){toast("Couldn't copy here. Use Send invite instead")}});
+const _renderAll=renderAll;renderAll=function(){_renderAll();renderAccounts();renderInvites()};
 renderAll();initStore();
 
 </script>
